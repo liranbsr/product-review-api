@@ -16,7 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATA_FILE = "products.json"
+DATA_FILE = "data.json"
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # טען את המאגר הקיים אם יש
