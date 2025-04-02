@@ -1,13 +1,12 @@
 import os
 import json
 import openai
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
-# לאפשר CORS בשביל Shopify
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,15 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATA_FILE = "data.json"  # ← שים לב: זה השם הנכון עכשיו
-
 openai.api_key = os.getenv("OPENAI_API_KEY")
-
-if os.path.exists(DATA_FILE):
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        db = json.load(f)
-else:
-    db = {}
 
 @app.post("/api/product-summary")
 async def get_summary(data: dict):
@@ -36,22 +27,17 @@ async def get_summary(data: dict):
     if not key:
         return JSONResponse({"error": "Missing SKU or Barcode"}, status_code=400)
 
-    if key in db:
-        return db[key]
-
     lang_instruction = "Please respond in Hebrew." if lang == "he" else "Please respond in English."
 
     prompt = f"""
 You are a product analyst AI. Find real user reviews from trusted online sources about the product with code: {key}.
 Summarize the most common feedback in 2 sentences.
 Respond only with valid JSON in this format:
-
 {{
   "average_score": float,
   "summary": "string",
   "total_reviews": int
 }}
-
 {lang_instruction}
 """
 
@@ -64,14 +50,8 @@ Respond only with valid JSON in this format:
             ],
             temperature=0.7,
         )
-
         content = response.choices[0].message.content
         result = json.loads(content)
-
-        db[key] = result
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(db, f, indent=2, ensure_ascii=False)
-
         return result
 
     except Exception as e:
