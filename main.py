@@ -1,12 +1,13 @@
-import json
 import os
+import json
+import openai
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import openai
 
 app = FastAPI()
 
+# לאפשר CORS בשביל Shopify
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,7 +16,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATA_FILE = "products.json"
+DATA_FILE = "data.json"  # ← שים לב: זה השם הנכון עכשיו
+
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 if os.path.exists(DATA_FILE):
@@ -29,8 +31,8 @@ async def get_summary(data: dict):
     sku = data.get("sku")
     barcode = data.get("barcode")
     lang = data.get("lang", "he")
-    key = barcode or sku
 
+    key = sku or barcode
     if not key:
         return JSONResponse({"error": "Missing SKU or Barcode"}, status_code=400)
 
@@ -40,26 +42,29 @@ async def get_summary(data: dict):
     lang_instruction = "Please respond in Hebrew." if lang == "he" else "Please respond in English."
 
     prompt = f"""
-    You are a product analyst AI. Find real user reviews from trusted online sources about the product with model code: {key}.
-    Summarize the most common feedback in 2 sentences.
-    {lang_instruction}
-    Respond only with valid JSON in this format:
-    {{
-      "average_score": float,
-      "summary": "string",
-      "total_reviews": int
-    }}
-    """
+You are a product analyst AI. Find real user reviews from trusted online sources about the product with code: {key}.
+Summarize the most common feedback in 2 sentences.
+Respond only with valid JSON in this format:
+
+{{
+  "average_score": float,
+  "summary": "string",
+  "total_reviews": int
+}}
+
+{lang_instruction}
+"""
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You're a helpful assistant that analyzes product reviews."},
+                {"role": "system", "content": "You are a helpful assistant that analyzes product reviews."},
                 {"role": "user", "content": prompt},
             ],
             temperature=0.7,
         )
+
         content = response.choices[0].message.content
         result = json.loads(content)
 
