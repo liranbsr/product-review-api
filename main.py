@@ -1,21 +1,30 @@
-import openai
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import openai
+import os
+import json
 
 app = FastAPI()
 
-# הגדרת המפתח שלך עבור OpenAI
-openai.api_key = "הכנס את המפתח שלך כאן"
-
-# הוספת CORS (Cross-Origin Resource Sharing) 
+# אפשר CORS לגישה מ-Shopify בלבד
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # אפשר גישה מכל מקור
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # אפשר כל סוג של מתודה
-    allow_headers=["*"],  # אפשר כל כותרת
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+DATA_FILE = "products.json"
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# טען את המאגר הקיים אם יש
+if os.path.exists(DATA_FILE):
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        db = json.load(f)
+else:
+    db = {}
 
 @app.post("/api/product-summary")
 async def get_summary(data: dict):
@@ -23,30 +32,35 @@ async def get_summary(data: dict):
     barcode = data.get("barcode")
     lang = data.get("lang", "he")
 
-    if not sku or not barcode:
-        return JSONResponse(
-            content={"error": "Missing SKU or Barcode"},
-            status_code=400,
-        )
+    if not sku and not barcode:
+        return JSONResponse({"error": "Missing SKU or Barcode"}, status_code=400)
+
+    key = barcode or sku
+    if key in db:
+        return db[key]
+
+    prompt = open("gpt_product_prompt.txt", "r", encoding="utf-8").read()
+    prompt = prompt.replace("{{sku}}", sku or "").replace("{{barcode}}", barcode or "")
 
     try:
-        prompt = f"Product Name: {sku}. Find real user reviews from trusted online sources about the product with barcode {barcode}. Summarize the most common feedback in 1 sentence. Language: {lang}."
-        
         response = openai.ChatCompletion.create(
-            model="gpt-4",  # שימוש במודל האחרון של GPT
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that analyzes product reviews."},
-                {"role": "user", "content": prompt},
+                {"role": "user", "content": prompt}
             ],
-            temperature=0.7,
-            max_tokens=150
+            temperature=0.7
         )
-        
-        result = response.choices[0].message.content.strip()
-        return {"summary": result}
+        content = response.choices[0].message.content
+        result = json.loads(content)
+
+        # שמור למאגר
+        db[key] = result
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(db, f, ensure_ascii=False, indent=2)
+
+        return result
 
     except Exception as e:
-        return JSONResponse(
-            content={"error": f"Error in generating summary: {str(e)}"},
-            status_code=500,
-        )
+        print("GPT ERROR:", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
