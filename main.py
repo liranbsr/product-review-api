@@ -1,9 +1,9 @@
 import os
 import json
-import openai
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from openai import OpenAI
 
 app = FastAPI()
 
@@ -15,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @app.post("/api/product-summary")
 async def get_summary(data: dict):
@@ -42,7 +42,7 @@ Respond only with valid JSON in this format:
 """
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that analyzes product reviews."},
@@ -51,7 +51,7 @@ Respond only with valid JSON in this format:
             temperature=0.7,
         )
         content = response.choices[0].message.content
-        print("GPT raw output:", content)  # ← DEBUG output
+        print("GPT raw output:", content)  # debug
         result = json.loads(content)
         return result
 
