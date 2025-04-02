@@ -1,30 +1,21 @@
+import openai
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import openai
-import os
-import json
 
 app = FastAPI()
 
-# אפשר CORS לגישה מ-Shopify בלבד
+# הגדרת המפתח שלך עבור OpenAI
+openai.api_key = "הכנס את המפתח שלך כאן"
+
+# הוספת CORS (Cross-Origin Resource Sharing) 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # אפשר גישה מכל מקור
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # אפשר כל סוג של מתודה
+    allow_headers=["*"],  # אפשר כל כותרת
 )
-
-DATA_FILE = "data.json"
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-# טען את המאגר הקיים אם יש
-if os.path.exists(DATA_FILE):
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        db = json.load(f)
-else:
-    db = {}
 
 @app.post("/api/product-summary")
 async def get_summary(data: dict):
@@ -32,35 +23,27 @@ async def get_summary(data: dict):
     barcode = data.get("barcode")
     lang = data.get("lang", "he")
 
-    if not sku and not barcode:
-        return JSONResponse({"error": "Missing SKU or Barcode"}, status_code=400)
-
-    key = barcode or sku
-    if key in db:
-        return db[key]
-
-    prompt = open("gpt_product_prompt.txt", "r", encoding="utf-8").read()
-    prompt = prompt.replace("{{sku}}", sku or "").replace("{{barcode}}", barcode or "")
+    if not sku or not barcode:
+        return JSONResponse(
+            content={"error": "Missing SKU or Barcode"},
+            status_code=400,
+        )
 
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that analyzes product reviews."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7
+        prompt = f"Product Name: {sku}. Find real user reviews from trusted online sources about the product with barcode {barcode}. Summarize the most common feedback in 1 sentence. Language: {lang}."
+        
+        response = openai.Completion.create(
+            model="text-davinci-003",
+            prompt=prompt,
+            temperature=0.7,
+            max_tokens=150
         )
-        content = response.choices[0].message.content
-        result = json.loads(content)
-
-        # שמור למאגר
-        db[key] = result
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(db, f, ensure_ascii=False, indent=2)
-
-        return result
+        
+        result = response.choices[0].text.strip()
+        return {"summary": result}
 
     except Exception as e:
-        print("GPT ERROR:", e)
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return JSONResponse(
+            content={"error": f"Error in generating summary: {str(e)}"},
+            status_code=500,
+        )
