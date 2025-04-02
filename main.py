@@ -1,12 +1,13 @@
-import os
-import json
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from openai import OpenAI
+import openai
+import os
+import json
 
 app = FastAPI()
 
+# אפשר CORS לגישה מ-Shopify בלבד
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,7 +16,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+DATA_FILE = "data.json"
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# טען את המאגר הקיים אם יש
+if os.path.exists(DATA_FILE):
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        db = json.load(f)
+else:
+    db = {}
 
 @app.post("/api/product-summary")
 async def get_summary(data: dict):
@@ -23,38 +32,35 @@ async def get_summary(data: dict):
     barcode = data.get("barcode")
     lang = data.get("lang", "he")
 
-    key = sku or barcode
-    if not key:
+    if not sku and not barcode:
         return JSONResponse({"error": "Missing SKU or Barcode"}, status_code=400)
 
-    lang_instruction = "Please respond in Hebrew." if lang == "he" else "Please respond in English."
+    key = barcode or sku
+    if key in db:
+        return db[key]
 
-    prompt = f"""
-You are a product analyst AI. Find real user reviews from trusted online sources about the product with code: {key}.
-Summarize the most common feedback in 2 sentences.
-Respond only with valid JSON in this format:
-{{
-  "average_score": float,
-  "summary": "string",
-  "total_reviews": int
-}}
-{lang_instruction}
-"""
+    prompt = open("gpt_product_prompt.txt", "r", encoding="utf-8").read()
+    prompt = prompt.replace("{{sku}}", sku or "").replace("{{barcode}}", barcode or "")
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that analyzes product reviews."},
-                {"role": "user", "content": prompt},
+                {"role": "user", "content": prompt}
             ],
-            temperature=0.7,
+            temperature=0.7
         )
         content = response.choices[0].message.content
-        print("GPT raw output:", content)  # debug
         result = json.loads(content)
+
+        # שמור למאגר
+        db[key] = result
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(db, f, ensure_ascii=False, indent=2)
+
         return result
 
     except Exception as e:
-        print("Error during GPT call:", str(e))
+        print("GPT ERROR:", e)
         return JSONResponse({"error": str(e)}, status_code=500)
