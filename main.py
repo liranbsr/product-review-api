@@ -51,8 +51,10 @@ Respond only with valid JSON in this format:
             temperature=0.7,
         )
         content = response.choices[0].message.content
+        print("GPT raw output:", content)  # ← DEBUG output
         result = json.loads(content)
         return result
 
     except Exception as e:
+        print("Error during GPT call:", str(e))
         return JSONResponse({"error": str(e)}, status_code=500)
