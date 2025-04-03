@@ -38,12 +38,15 @@ Find real user feedback from trusted sources on the internet (such as Amazon, Re
    - Only include findings that are supported by multiple user reviews.
    - Avoid general marketing language.
    - The tone should be trustworthy, professional, yet human — as if written by an analyst summarizing consumer feedback.
+   - Avoid starting all summaries with the same wording (e.g., “Users appreciate…”). Vary the opening sentence structure and tone to make each product summary unique.
 
 2. Write a short headline (3–4 words) summarizing the overall impression.
    - Do not include the product name in the title.
    - The title should reflect the general sentiment and main points.
 
-3. Return the result in **valid JSON only**, with no formatting or extra characters:
+3. Provide an estimated total number of reviews based on actual data found online. Avoid making up or rounding the number — it should feel realistic and credible.
+
+4. Return the result in valid JSON only (no formatting or markdown):
 {{
   "title": "string",
   "summary": "string (4 sentences)",
