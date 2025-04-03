@@ -22,14 +22,14 @@ async def get_summary(data: dict):
     sku = data.get("sku")
     barcode = data.get("barcode")
     lang = data.get("lang", "he")
-
+    
     key = sku or barcode
     if not key:
         return JSONResponse({"error": "Missing SKU or Barcode"}, status_code=400)
 
     lang_instruction = "Please write in Hebrew." if lang == "he" else "Please write in English."
 
-   prompt = f"""
+    prompt = f"""
 Act as a product review analyst. Based on typical online user feedback, provide an authentic-looking summary for the product with model code: {key}.
 Your task:
 
