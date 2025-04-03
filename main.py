@@ -21,21 +21,31 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 async def get_summary(data: dict):
     sku = data.get("sku")
     barcode = data.get("barcode")
+    title = data.get("title")
     lang = data.get("lang", "he")
 
-    key = sku or barcode
+    key = sku or barcode or title
     if not key:
-        return JSONResponse({"error": "Missing SKU or Barcode"}, status_code=400)
+        return JSONResponse({"error": "Missing SKU, Barcode, or Title"}, status_code=400)
 
     lang_instruction = "Please respond in Hebrew." if lang == "he" else "Please respond in English."
 
     prompt = f"""
-You are a product analyst AI. Find real user reviews from trusted online sources about the product with code: {key}.
-Summarize the most common feedback in 2 sentences.
-Respond only with valid JSON in this format:
+You are a product analyst AI. Find real user reviews from trusted online sources about the product with the following information:
+Title: {title}
+Code: {key}
+
+Based on these reviews:
+1. Write a short headline-style summary of the product in 1 sentence (like a review title).
+2. Write a brief summary of the most common feedback in 2 sentences.
+3. Estimate the average user rating (from 1 to 5).
+4. Estimate the total number of reviews found.
+
+Respond only in valid JSON format like this:
 {{
-  "average_score": float,
+  "title_line": "string",
   "summary": "string",
+  "average_score": float,
   "total_reviews": int
 }}
 {lang_instruction}
@@ -51,7 +61,7 @@ Respond only with valid JSON in this format:
             temperature=0.7,
         )
         content = response.choices[0].message.content
-        print("GPT raw output:", content)  # debug
+        print("GPT raw output:", content)
         result = json.loads(content)
         return result
 
