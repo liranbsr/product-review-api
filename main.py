@@ -31,14 +31,13 @@ async def get_summary(data: dict):
 
     prompt = f"""
 You are a product analyst AI. Find real user reviews from trusted online sources about the product with code: {key}.
-Summarize the most common feedback in **3 sentences** (not 2).
-Focus on performance, usability, and any common pros and cons.
-Respond only with valid JSON in this format:
+Summarize the most common feedback in 2-3 sentences.
+Respond only with compact valid JSON (no ``` or formatting), in this format:
 {{
   "average_score": float,
   "summary": "string",
   "total_reviews": int,
-  "title": "short summary title"
+  "title": "short headline summarizing the product feedback"
 }}
 {lang_instruction}
 """
@@ -52,8 +51,12 @@ Respond only with valid JSON in this format:
             ],
             temperature=0.7,
         )
-        content = response.choices[0].message.content
-        print("GPT raw output:", content)
+        content = response.choices[0].message.content.strip()
+
+        # Handle possible markdown formatting from GPT
+        if content.startswith("```json"):
+            content = content.removeprefix("```json").removesuffix("```").strip()
+
         result = json.loads(content)
         return result
 
