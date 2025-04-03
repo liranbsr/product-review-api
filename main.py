@@ -1,3 +1,5 @@
+// main.py – גרסה מעודכנת לשיפור סגנון וסיכום GPT
+
 import os
 import json
 from fastapi import FastAPI
@@ -27,33 +29,26 @@ async def get_summary(data: dict):
     if not key:
         return JSONResponse({"error": "Missing SKU or Barcode"}, status_code=400)
 
-    lang_instruction = "Please respond in Hebrew." if lang == "he" else "Please respond in English."
+    lang_instruction = "Please write in Hebrew." if lang == "he" else "Please write in English."
 
     prompt = f"""
-You are an AI that summarizes real user reviews about a product. 
-Find real user feedback from trusted sources on the internet (such as Amazon, Reddit, review sites, etc.) for the product with the following code:
-{key}
-
-1. Summarize the key insights in 4 sentences.
-   - Only include findings that are supported by multiple user reviews.
-   - Avoid general marketing language.
-   - The tone should be trustworthy, professional, yet human — as if written by an analyst summarizing consumer feedback.
-   - Avoid starting all summaries with the same wording (e.g., “Users appreciate…”). Vary the opening sentence structure and tone to make each product summary unique.
-
-2. Write a short headline (3–4 words) summarizing the overall impression.
-   - Do not include the product name in the title.
-   - The title should reflect the general sentiment and main points.
-
-3. Provide an estimated total number of reviews based on actual data found online. Avoid making up or rounding the number — it should feel realistic and credible.
-
-4. Return the result in valid JSON only (no formatting or markdown):
+You are a product review analysis assistant.
+Find real, authentic user reviews from trustworthy online sources about the product with code or title: {key}.
+Your task is to:
+1. Summarize the most common feedback into **4 distinct sentences**.
+2. Use a **natural and professional but human tone**, like genuine review summaries.
+3. Do **not** repeat the product model or SKU in the text.
+4. Begin the summary directly – no phrases like \"Users find\" or \"The product is...\"
+5. Vary the wording and phrasing from product to product.
+6. Return a **short, 3-4 word title** summarizing the sentiment or core idea.
+7. Estimate the **number of total reviews**, try to be accurate (not rounded), based on what you find.
+8. Return a valid JSON response like:
 {{
-  "title": "string",
-  "summary": "string (4 sentences)",
-  "average_score": float,
-  "total_reviews": int
+  "average_score": float (from 0 to 5),
+  "summary": "string of 4 sentences",
+  "total_reviews": int,
+  "title": "short summary title"
 }}
-
 {lang_instruction}
 """
 
@@ -61,16 +56,13 @@ Find real user feedback from trusted sources on the internet (such as Amazon, Re
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that analyzes product reviews."},
+                {"role": "system", "content": "You analyze user reviews from the internet and summarize them."},
                 {"role": "user", "content": prompt},
             ],
             temperature=0.7,
         )
-        content = response.choices[0].message.content.strip()
-
-        if content.startswith("```json"):
-            content = content.removeprefix("```json").removesuffix("```").strip()
-
+        content = response.choices[0].message.content
+        print("GPT raw output:", content)
         result = json.loads(content)
         return result
 
