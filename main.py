@@ -22,7 +22,7 @@ async def get_summary(data: dict):
     sku = data.get("sku")
     barcode = data.get("barcode")
     lang = data.get("lang", "he")
-    
+
     key = sku or barcode
     if not key:
         return JSONResponse({"error": "Missing SKU or Barcode"}, status_code=400)
@@ -30,26 +30,24 @@ async def get_summary(data: dict):
     lang_instruction = "Please write in Hebrew." if lang == "he" else "Please write in English."
 
     prompt = f"""
-Act as a product review analyst. Based on typical online user feedback, provide an authentic-looking summary for the product with model code: {key}.
-Your task:
-
-1. Summarize common feedback in **4 varied sentences**.
-2. Use a **natural, professional, human tone** – like a real review.
-3. **Don't** repeat the product model or SKU in the text.
-4. Avoid phrases like "users say", "users find", or "users praise" – just describe the product directly.
-5. Vary the style and phrasing between summaries.
-6. Provide a **short, 3–4 word title** that captures the sentiment or main point.
-7. Estimate the **number of total reviews** (as close and realistic as possible).
-8. Respond in **valid JSON**, with this format:
-
+Find real, authentic user reviews from trustworthy online sources about the product with product model code: {key}.
+Your task is to:
+1. Summarize the most common feedback into **4 distinct sentences**.
+2. Use a **natural and professional but human tone**, like genuine review.
+3. Do **not** repeat the product model or SKU in the text.
+4. Don’t begin or use phrases like \"Users find\" or \"Users praise\" etc. Just describe the product (better to use \"the laptop is..\" and not \"the product is\").
+5. Vary the wording and phrasing from product to product.
+6. Return a **short, 3–4 word title** summarizing the sentiment or core idea.
+7. Estimate the **number of total reviews**, try to be accurate (not rounded), based on what you find.
+8. Return a valid JSON response like:
 {{
-  "average_score": float from 0 to 5,
-  "summary": "4 full review-style sentences",
+  "average_score": float (from 0 to 5),
+  "summary": "string of 4 sentences",
   "total_reviews": int,
-  "title": "3–4 word summary title"
+  "title": "short summary title"
 }}
-
 {lang_instruction}
+Respond only with raw JSON. Do not say anything else. Do not explain. Do not apologize. Do not wrap it in code block.
 """
 
     try:
