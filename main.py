@@ -1,5 +1,3 @@
-// main.py – גרסה מעודכנת לשיפור סגנון וסיכום GPT
-
 import os
 import json
 from fastapi import FastAPI
