@@ -1,6 +1,6 @@
 import os
 import json
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from openai import OpenAI
@@ -30,26 +30,26 @@ async def get_summary(data: dict):
     lang_instruction = "Please write in Hebrew." if lang == "he" else "Please write in English."
 
     prompt = f"""
-Act as a professional product review analyst. Based on your knowledge and typical online user feedback, write an **aggregated summary** for the product with model code: {key}.
+Act as a professional product reviewer. Based on your knowledge and typical online user feedback, write a **realistic review** for the product with model code: {key}.
 
 Your output must follow these rules:
-1. Summarize the most common feedback into **3-4 complete sentences**.
+1. **Write in the voice of a single reviewer**, as if it's a genuine, natural human review. For example: "The laptop is reliable and fast" — not "users appreciate...".
 2. Use a **natural, professional, and human tone**, like a genuine review.
-3. Write it as a **summary of user opinions**, not a generic product description.
-4. **Avoid marketing phrases** or general statements.
-5. **Do NOT** repeat the product model or SKU in the text.
-6. Rephrase between products to ensure unique style for each.
-7. Return a **short, 3–4 word title** that captures the overall sentiment or insight (no product name in title).
-8. Estimate the number of reviews (*as accurate as possible, not rounded*).
-9. **Keep average score and total reviews consistent** when summarizing the same product in future calls.
+3. Write a **3–4 sentence paragraph**.
+4. It should be **a product review**, not a general product description.
+5. Avoid any marketing buzzwords or vague generalities.
+6. Do **not** mention the product model or SKU in the text.
+7. Vary the wording and phrasing between products.
+8. Return a short **3–4 word title** that captures the core idea or sentiment (do not include product name).
+9. Estimate the **exact number of reviews**, based on what you find (not rounded).
+10. Keep the score and total reviews **consistent for the same product** over multiple runs.
 
-Respond **only with valid JSON** in the following format – no explanation, no markdown, no extra text, and no apology:
-
+Respond **only** with valid JSON in the following format — no explanation, no markdown, no extra text, and no apology:
 {{
   "average_score": float (e.g. 4.3),
-  "summary": "your 3-4 sentence summary here",
+  "summary": "your 3–4 sentence review",
   "total_reviews": integer,
-  "title": "3-4 word summary title"
+  "title": "3–4 word summary title"
 }}
 
 {lang_instruction}
@@ -64,11 +64,17 @@ Respond **only with valid JSON** in the following format – no explanation, no 
             ],
             temperature=0.7,
         )
-        content = response.choices[0].message.content
+
+        content = response.choices[0].message.content.strip()
         print("GPT raw output:", content)
-        result = json.loads(content)
-        return result
+
+        try:
+            result = json.loads(content)
+            return result
+        except json.JSONDecodeError:
+            print("Invalid JSON returned")
+            return JSONResponse({"error": "Invalid JSON from GPT"}, status_code=500)
 
     except Exception as e:
         print("Error during GPT call:", str(e))
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        return JSONResponse({"error": str(e)}, status_code=500)
