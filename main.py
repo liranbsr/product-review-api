@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from openai import OpenAI
 
 app = FastAPI()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app.add_middleware(
     CORSMiddleware,
@@ -15,36 +16,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 @app.post("/api/product-summary")
-async def get_summary(data: dict):
-    key = data.get("sku")
+async def get_summary(request: Request):
+    data = await request.json()
+    key = data.get("sku") or data.get("barcode")
     lang = data.get("lang", "he")
 
     if not key:
         return JSONResponse({"error": "Missing SKU or Barcode"}, status_code=400)
 
-    lang_instruction = "כתוב בעברית בבקשה." if lang == "he" else "Please write in English."
+    lang_instruction = "Please write in Hebrew." if lang == "he" else "Please write in English."
 
     prompt = f"""
-You are a professional product reviewer. Your task is to research and write a single third-person, natural-sounding product review, based on real user reviews from multiple sources (such as Amazon, Reddit, forums, tech sites, etc). Use aggregated insights and transform them into a fluent, human-sounding review.
-
-⚠️ The review must:
-- Be written in third-person only (no “users say”, “customers mention”, or “this product”).
-- Read like a single opinionated review, not a summary.
-- Contain exactly 4 informative sentences, including pros and cons.
-- Vary wording between products.
-- Be neutral, professional, and clear. No exaggerated marketing terms.
-- Do not repeat the product model or brand in the text.
-
-Use only real, reliable feedback. Return the result in this JSON format:
+Find real user reviews from trustworthy online sources about the product with model code: {key}.
+Your task is:
+1. Research real reviews from as many reputable sources as possible.
+2. Write a concise summary of 3–4 sentences, based on your findings.
+3. Use third person only. No phrases like "users say" or "customers report". Just describe the product directly.
+4. No marketing fluff. No repetition.
+5. Include a short 3–4 word title that captures the essence of the review.
+6. Estimate the total number of reviews as accurately as possible.
+7. Return only valid JSON, like this:
 
 {{
-  "average_score": float (e.g., 4.2),
-  "summary": "4-sentence aggregated third-person review",
-  "total_reviews": integer (not rounded),
-  "title": "3–4 word opinion title"
+  "average_score": float (e.g. 4.3),
+  "summary": "your 3–4 sentence summary here",
+  "total_reviews": integer,
+  "title": "3–4 word summary title"
 }}
 
 {lang_instruction}
@@ -52,19 +50,12 @@ Use only real, reliable feedback. Return the result in this JSON format:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4-1106-preview",
-            messages=[
-                {"role": "system", "content": "You analyze user reviews from the internet and summarize them."},
-                {"role": "user", "content": prompt.replace("{key}", key)}
-            ],
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
         )
-
         content = response.choices[0].message.content
-        print("GPT raw output:", content)
-        result = json.loads(content)
-        return result
-
+        return json.loads(content)
     except Exception as e:
-        print(f"Error during GPT call:", str(e))
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        print("Error during GPT call:", str(e))
+        return JSONResponse({"error": "GPT call failed"}, status_code=500)
