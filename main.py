@@ -55,7 +55,7 @@ Respond **only with valid JSON** in the following format — no explanation, no 
 {lang_instruction}
 """
 
-    try:
+try:
         response = client.chat.completions.create(
             model="gpt-4-1106-preview",
             messages=[
