@@ -30,23 +30,22 @@ async def get_product_summary(data: dict):
     lang_instruction = "Please write in Hebrew." if lang == "he" else "Please write in English."
 
     prompt = f"""
-Act as a professional product review analyst. Based on your knowledge and typical online user feedback, write an **aggregated review** for the product with model code: {key}.
+Search for real, authentic user reviews from trustworthy online sources about the product with model code: {key}. Your goal is to write a single **aggregated review**, as if describing the product based on real user feedback — not as a summary of reviews and not as a first-person experience.
 
-Your output must follow these rules:
-1. Summarize the most common feedback into **3–4 complete sentences**.
-2. Use a **natural, professional, and human tone**, like a genuine review.
-3. Write it as a **summary of user opinion**, not a generic product description.
-4. **Avoid marketing phrases** or general statements.
-5. **Do not** repeat the product model or SKU in the text.
-6. Write in varied tone and sentence structure across products.
-7. Return a **short 3–4 word title** that captures the overall sentiment or insight (no product name in title).
-8. Estimate the **total number of reviews** (as accurate as possible, not rounded).
-9. **Keep average score and total reviews consistent** when summarizing the same product in future calls.
+Do not mention the brand or model code within the review. Do not use phrases like “users say”, “many reviewers”, “customers report”, or “this product”. Just describe the product itself based on the web reviews aggregated info.
 
+Your review must:
+1. Be based on real user reviews from multiple sources (e.g., Amazon, Reddit, review sites).
+2. Be written in a **natural, professional, and human tone**, like a product expert writing a review summary.
+3. Avoid any marketing fluff or generic praise.
+4. Be **exactly 4 full sentences**, including both pros and cons.
+5. Be unique in style per product.
+6. Do not invent data. Be realistic.
+7. Return the result in the following valid JSON structure:
 Respond **only** with valid JSON in the following format – no explanation, no markdown, no extra text, and no apology:
 {{
-  "average_score": float (e.g. 4.3),
-  "summary": "your 3–4 sentence summary here",
+  "average_score": float (from 0 to 5),
+  "summary": "your 3–4 sentence aggregated review",
   "total_reviews": integer,
   "title": "3–4 word summary title"
 }}
