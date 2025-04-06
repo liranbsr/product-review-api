@@ -27,25 +27,28 @@ async def get_summary(request: Request):
 
     lang_instruction = "Please write in Hebrew." if lang == "he" else "Please write in English."
 
-    prompt = f"""
-Find real user reviews from trustworthy online sources about the product with model code: {key}.
-Your task is:
-1. Research real reviews from as many reputable sources as possible.
-2. Write a concise summary of 3–4 sentences, based on your findings.
-3. Use third person only. No phrases like "users say" or "customers report". Just describe the product directly.
-4. No marketing fluff. No repetition.
-5. Include a short 3–4 word title that captures the essence of the review.
-6. Estimate the total number of reviews as accurately as possible.
-7. Return only valid JSON, like this:
+prompt = f"""
+Find authentic user reviews from trustworthy online sources about the product with model code: {key}.
+Your task is to research thoroughly and generate a natural and informative product review, as if it were written by a real person.
 
+Guidelines:
+1. Search multiple reputable sources (Amazon, BestBuy, Reddit, etc.) to collect real reviews.
+2. Write a **concise, third-person product review** — exactly 3 to 4 sentences.
+3. Do **not** mention users, customers, reviews, or the product model/code. Do **not** say “users report”, “people like”, “customers say”, etc.
+4. Focus on the product itself: describe its screen, battery, design, materials, performance, or any common flaws.
+5. Avoid marketing language, vague praise, or general statements.
+6. Vary wording and phrasing — avoid repeating structures between products.
+7. Include a **short, 3–4 word title** that reflects the product's character (e.g. "Solid Build, Average Battery").
+8. Estimate the **exact number** of real reviews you found (not rounded).
+9. Output must be in clean JSON **only** — no intro, no markdown, no explanation.
+
+Format:
 {{
   "average_score": float (e.g. 4.3),
-  "summary": "your 3–4 sentence summary here",
+  "summary": "3–4 sentence natural review here",
   "total_reviews": integer,
-  "title": "3–4 word summary title"
+  "title": "3–4 word title"
 }}
-
-{lang_instruction}
 """
 
     try:
