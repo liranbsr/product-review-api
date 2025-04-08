@@ -28,7 +28,7 @@ async def get_summary(request: Request):
 
     lang_instruction = "Please write in Hebrew." if lang == "he" else "Please write in English."
 
-   prompt = f"""
+    prompt = f"""
 Find **authentic user reviews** from trustworthy online sources about the product with model code: {key}.
 
 Your task is to **research thoroughly** and write a concise, realistic 3–4 sentence **review-style summary** in third person, as if written by a real person who tested the product – but based on **aggregated reviews**.
@@ -42,10 +42,10 @@ Guidelines:
    ❌ Not: "Users say the screen is good."
 5. Do **not** include the model number in the text.
 6. Focus on actual performance: display, speed, battery, flaws, materials, real-world usage.
-7. Vary structure and language between products. Avoid repetition.
-8. Include a **short 3–4 word title** summarizing the main takeaway.
+7. Vary structure and vocabulary between summaries. Avoid repetition.
+8. Include a **short 3–4 word title** that reflects the main takeaway.
 9. Estimate the **exact number of real reviews** found (not rounded).
-10. Output must be clean JSON **only** — no intro, no explanation, no markdown.
+10. Output must be clean JSON **only** — no intro, no markdown, no explanation.
 
 Format:
 {{
@@ -54,6 +54,8 @@ Format:
   "total_reviews": integer,
   "title": "3–4 word title"
 }}
+
+{lang_instruction}
 """
 
     try:
@@ -70,5 +72,5 @@ Format:
         return result
 
     except Exception as e:
-        print("Error during GPT call:", str(e))
+        print(f"Error during GPT call: {e}")
         return JSONResponse(content={"error": "GPT call failed"}, status_code=500)
