@@ -28,24 +28,25 @@ async def get_summary(request: Request):
     lang_instruction = "Please write in Hebrew." if lang == "he" else "Please write in English."
 
 prompt = f"""
-Find authentic user reviews from trustworthy online sources about the product with model code: {key}.
-Your task is to research thoroughly and generate a natural and informative product review, as if it were written by a real person.
+Find **authentic user reviews** from trustworthy online sources about the product with model code: {key}.
 
-Guidelines:
-1. Search multiple reputable sources (Amazon, BestBuy, Reddit, etc.) to collect real reviews.
-2. Write a **concise, third-person product review** — exactly 3 to 4 sentences.
-3. Do **not** mention users, customers, reviews, or the product model/code. Do **not** say “users report”, “people like”, “customers say”, etc.
-4. Focus on the product itself: describe its screen, battery, design, materials, performance, or any common flaws.
-5. Avoid marketing language, vague praise, or general statements.
-6. Vary wording and phrasing — avoid repeating structures between products.
-7. Include a **short, 3–4 word title** that reflects the product's character (e.g. "Solid Build, Average Battery").
-8. Estimate the **exact number** of real reviews you found (not rounded).
-9. Output must be in clean JSON **only** — no intro, no markdown, no explanation.
+Your task is to **research thoroughly** and write a 3–4 sentence **review-style summary** in third person, as if written by a real person who tested the product — but based on aggregated reviews.
 
-Format:
+ Guidelines:
+1. Search and cross-reference multiple reputable sources (Amazon, BestBuy, Reddit, etc.).
+2. The summary should describe the product itself — **not** what "users say" about it. 
+3. Use **direct third-person language**, like "The screen offers sharp contrast and smooth motion", not "Users report that the screen is good".
+4. Do **not** mention the product name or model inside the text.
+5. Use a **neutral, confident, and precise tone** – like an expert tech journalist.
+6. Avoid vague words like "great", "nice", or "impressive". Be specific.
+7. Vary the structure and vocabulary between summaries.
+8. Include a 3–4 word title that reflects the **main takeaway**.
+9. Estimate the **accurate total number of reviews** based on your findings.
+10. Output only valid **JSON**, like this:
+
 {{
   "average_score": float (e.g. 4.3),
-  "summary": "3–4 sentence natural review here",
+  "summary": "your 3–4 sentence natural-sounding review here",
   "total_reviews": integer,
   "title": "3–4 word title"
 }}
